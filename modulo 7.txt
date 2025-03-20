@@ -1,0 +1,169 @@
+date 
+sudo dnf install -y nfs4-acl-tools
+sudo dnf install -y nfs-utils 
+sudo systemctl restart nfs-server --now 
+sudo mkdir -p /var/nfs/OS3
+sudo chown nobody:nobody /var/nfs/OS3
+
+cd /var/nfs/OS3/
+sudo touch adrian{1..100}.txt
+
+ls 
+
+sudo chown 2024-2369:2024-2369 * 
+sudo chmod  666 *
+
+ls -l
+
+pwd
+/var/nfs/OS3
+sudo vi /etc/exports
+
+/var/nfs/OS3	*(rw,sync,no_subtree_check)
+/home	*(rw,sync,no_root_squash,no_subtree_check)
+
+
+sudo  exportfs -avr 
+
+sudo firewall-cmd --permanent --add-service=nfs
+sudo firewall-cmd --permanent --add-service=rpc_bind
+sudo firewall-cmd --permanent --add-service=mountd
+
+sudo firewall-cmd --reload 
+
+nodo2-------------------------------------- 
+
+showmount -e  192.168.100.128
+
+sudo mkdir -p /nfs/OS3
+sudo mkdir -p /home/OS3
+
+sudo mount 192.168.100.128:/var/nfs/OS3  /nfs/OS3/
+sudo mount 192.168.100.128:/home  /home/OS3  
+
+df -h
+
+sudo ls /nfs/OS3
+
+sudo vi /nfs/OS3/adrian1.txt
+
+mensaje randon 
+
+:wq
+
+nodo1 ------------------------------------------
+
+comprobar los cambios
+altero los cambios 
+
+nodo 2 --------------------------------------------
+
+sudo vi /etc/fstab
+
+
+192.168.100.128:/var/nfs/OS3/  /nfs/OS3/  nfs auto,nofail,noatime.,nolock,intr,tcp,actimeo=1800 0 0 
+192.168.100.128:/home /home/OS3  nfs auto,nofail,noatime.,nolock,intr,tcp,actimeo=1800 0 0
+
+reboot
+
+df -h
+
+sudo ls /nfs/OS3
+
+date 
+
+video 2 
+
+
+date 
+
+sudo dnf install samba -y
+
+sudo systemctl enable smb
+sudo systemctl start smb
+sudo systemctl enable nmb
+sudo systemctl start nmb
+
+sudo systemctl status smb
+sudo mkdir -p /samba
+
+sudo touch adrian{1..100}
+
+sudo chown 2024-2369:2024-2369 
+sudo chmod 666 * 
+
+ls -l
+
+sudo chown -R nobody:nobody /samba
+sudo chmod -R 0775 /samba
+
+
+sudo groupadd sambashare 
+
+sudo useradd -M -d /samba -s /sbin/nologin 2024-2369
+
+sudo smbpaswd -a 2024-2369
+
+
+sudo usermod -aG sambashare 2024-2369
+
+sudo chmod chown -R :sambashare /samba
+
+sudo vi /etc/samba/smb.conf
+
+[samba]
+path = /samba
+valid users = @sambashare
+guest ok = no
+writable = yes
+browsable = yes
+create mask = 0775
+directory mask = 0775
+
+:wq
+
+sudo systemctl restart smb nmb
+sudo systemctl status smb 
+
+sudo firewall-cmd --add-port=137/tcp --permanent
+sudo firewall-cmd --add-port=139/tcp --permanent
+sudo firewall-cmd --add-port=445/tcp --permanent
+
+sudo firewall-cmd --reload
+
+sudo setenforce 0
+
+windows ----------------------------------
+
+files 
+this pc
+
+//192.168.100.128
+
+mapear  
+
+
+hacer cambios  en los dos nodos 
+
+date   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
