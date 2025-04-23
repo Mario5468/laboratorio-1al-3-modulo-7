@@ -148,7 +148,260 @@ hacer cambios  en los dos nodos
 date   
 
 
+PRACTICA 1
+  PRÁCTICA NFS - COMPARTIR ARCHIVOS ENTRE LINUX (ORACLE LINUX)
+  Dirección IP del Servidor NFS: 10.0.0.11
+  Dirección IP del Cliente: 10.0.0.13
 
+SERVIDOR PRINCIPAL (10.0.0.11) 
+
+1. Instalar servidor NFS:
+sudo dnf install nfs-utils -y
+
+2. Crear directorio compartido:
+sudo mkdir -p /srv/nfs/OS3
+
+3. Crear 100 archivos:
+ cd /srv/nfs/OS3
+ touch adrian 1..100
+
+4. Asignar permisos:
+sudo chmod -R 755 /srv/nfs/OS3
+sudo chown -R nobody:nogroup /srv/nfs/OS3
+
+5. Configurar exports:
+sudo nano /etc/exports
+
+Agregar esta línea:
+  /srv/nfs/OS3 10.0.0.13(rw,sync,no_subtree_check,no_root_squash)
+
+6. Aplicar exportaciones:
+sudo exportfs -ra
+
+7. Iniciar servicios:
+sudo systemctl enable --now nfs-server
+sudo systemctl enable --now rpcbind
+
+8. Verificar estado:
+sudo systemctl status nfs-server
+
+9. Configurar Firewall:
+sudo firewall-cmd --permanent --add-service=nfs
+sudo firewall-cmd --permanent --add-service=mountd
+sudo firewall-cmd --permanent --add-service=rpc-bind
+sudo firewall-cmd --reload
+
+
+CLIENTE NFS (10.0.0.13) 
+
+1. Instalar cliente NFS:
+sudo dnf install nfs-utils -y
+
+2. Verificar exportaciones disponibles:
+showmount -e 10.0.0.11
+
+3. Crear punto de montaje:
+sudo mkdir -p /mnt/OS3
+
+4. Montar directorio compartido:
+sudo mount -t nfs 10.0.0.11:/srv/nfs/OS3 /mnt/OS3
+
+5. Verificar acceso:
+ls /mnt/OS3
+
+6. Montaje permanente en /etc/fstab:
+sudo nano /etc/fstab
+
+Agregar al final:
+10.0.0.11:/srv/nfs/OS3 /mnt/OS3 nfs defaults 0 0
+
+7. Probar montaje automático:
+sudo mount -a
+sudo reboot (y luego verificar: ls /mnt/OS3)
+
+
+ =====------------------------------------------------------------------------------------------
+
+PRACTICA 2
+
+sudo yum install samba*
+systemctl start smb
+systemctl enable smb
+systemctl status smb
+sudo systemctl enable smb --now
+sudo systemctl enable nmb --now
+
+sudo mkdir -p /srv/samba/practica
+cd
+ touch adrian 1..100
+sudo groupadd sambagrupo
+sudo useradd adrian
+sudo usermod -aG sambagrupo adrian
+sudo chown -R root:sambagrupo /srv/samba/practica
+sudo chmod -R 2770 /srv/samba/practica
+sudo smbpasswd -a 
+
+
+
+sudo nano /etc/samba/smb.conf
+
+[practica]
+   path = /srv/samba/practica
+   valid users = @sambagrupo
+   read only = no
+
+sudo chcon -t samba_share_t /srv/samba/practica -R
+
+sudo firewall-cmd --add-service=samba --permanent
+sudo firewall-cmd --reload
+
+------------------------------------------------------------------------------------------
+
+PRACTICA 3 SAMBA DC
+
+
+hostnamectl set-hostname SO3.inet
+
+nmtui
+ip y dns
+
+nano /etc/hosts
+
+10.0.0.11 SO3-DOM SO3.inet inet
+
+#DESCONECTAMOS Y CONECTAMOS INTERFAZ DE RED
+
+nano /etc/resolv.conf
+nameserver fe80::1%ens160
+
+
+mkdir -p /samba 
+cd
+
+#descargar el paquete de samba del sitio web oficial
+
+wget https://download.samba.org/pub/samba/stable/samba-4.22.0.tar.gz
+
+tar -zxf samba-4.22.0.tar.gz samba-4.22.0/
+cd samba-4.22.0
+
+#instalar el repositorio EPEL
+sudo dnf -y install epel-release
+
+#activa l repositorio de powertools
+sudo dnf config-manager --set-enabled crb
+dnf -y update
+
+# Instala todos los paquetes necesarios para compilar Samba
+sudo dnf -y install docbook-style-xsl python3-markdown bison dbus-devel flex gcc gdb gnutls-devel jansson-devel \
+keyutils-libs-devel krb5-workstation libacl-devel libarchive-devel libattr-devel libblkid-devel \
+libtasn1 libtasn1-tools libtalloc2-devel libtasn1 libtevent-devel openldap-devel pam-devel perl perl-ExtUtils-MakeMaker \
+perl-Parse-Yapp popt-devel python3-cryptography python3-dns python3-gpg python3-devel readline-devel rpcgen \
+systemd-devel tar zlib-devel perl-JSON gperftools-devel screen
+
+#verificar actualizaciones
+dnf -y update
+
+#prepara la configuración para compilar samba
+./configure
+
+#realiza la compilación de samba
+make -j 2
+
+#instala los archivos compilados de samba
+make -j 2 install
+
+#añade las rutas de samba al path
+export PATH=/usr/local/samba/bin/:/usr/local/samba/sbin/:$PATH
+
+#añade el path a los perfiles para usuario y root
+
+sudo nano ~/.bash_profile
+sudo nano ../.bash_profile
+
+PATH=$PATH:$HOME/bin:/usr/local/samba/bin/:/usr/local/samba/sbin/:$PATH
+export PATH
+
+#PROVISION DE DOMINIO
+sudo /usr/local/samba/bin/samba-tool domain provision --use-rfc2307 --interactive \
+--option='interfaces=lo ens160' \
+--option='bind interfaces only=yes'
+
+-SO3.inet
+-SO3-DOM
+-DC
+-SAMBA_INTERNAL
+-
+
+
+#inicia samba
+
+sudo /usr/local/samba/sbin/samba
+
+#prueba la resolución dns
+
+ping www.google.com
+
+#revisa los registros de hosts
+
+host -t SRV _ldap._tcp.SO3.inet
+
+host -t SRV _kerberos._udp.SO3.inet
+
+#prueba la resolución de dominio
+
+ping SO3.inet
+
+#copia el archivo de kerberos a su ubicación 
+
+cp /usr/local/samba/private/krb5.conf /etc/krb5.conf
+
+
+#instalar iptables y activarlo
+
+sudo dnf -y install iptables-services
+
+#detener y desactivar firewalld
+
+systemctl stop firewalld
+
+sudo systemctl start iptables
+sudo systemctl enable iptables
+
+#abre la configuración de iptables
+ sudo nano /etc/sysconfig/iptables
+
+# Añade las siguientes líneas antes de la línea -A INPUT -j REJECT
+
+-A INPUT -p tcp -s 10.0.0.11/24 -m state --state NEW -m multiport --dports 53,88,135,139,389,445,464,636,3268,49152:65535 -j ACCEPT
+
+-A INPUT -p udp -s 10.0.0.11/24 -m state --state NEW -m multiport --dports 53,123,137,138,389,636 -j ACCEPT
+
+#reiniiciar iptables
+
+sudo systemctl restart iptables
+
+#para registros A en el DNS de samba
+
+samba-tool dns add 10.0.0.11 SO3.inet www A 10.0.0.7 -U administrator
+
+sudo /usr/local/samba/bin/samba-tool user create lanegracubana 20241878Ab
+
+-----------------------------------------------WINDOWS--------------------------------------------------------
+
+Panel de control: centro de redes y recursos compartidos
+
+#
+configuración
+acerca de
+configuración avanzada del sistema
+nombre del equipo
+id de red
+
+EN CASO DE ERROR:
+Configurar txt hosts
+
+C:\Windows\System32\drivers\etc
 
 
 
